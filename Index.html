@@ -1,0 +1,1414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Xbox Mobile Dashboard Ultimate - Integrated Game Screen</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* ==========================================
+           BASE RESET & GLOBAL STYLES
+           ========================================== */
+        :root {
+            --body-bg-color: #0b0f0d; 
+            --sidebar-bg-color: #151515; 
+            --bottom-nav-bg-color: #1c1c1c; 
+            --bottom-btn-border: #262626; 
+            --bottom-nav-top-border: #2d2d2d; 
+            --accent-box-color: #2d2d2d; 
+            --item-hover-bg: #222222; 
+            --divider-line-color: #282828; 
+            --text-primary-color: #ffffff; 
+
+            --tile-height-padding: 18px; 
+            --bottom-btn-height: 68px; 
+            --sidebar-width: 380px; 
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #000;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* ==========================================
+           VIDEO LAYERS
+           ========================================== */
+        .video-layer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 1; 
+        }
+
+        .video-background {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        #video2 {
+            display: none;
+        }
+
+        /* ==========================================
+           ENTRY OVERLAY & HOLD BUTTON
+           ========================================== */
+        #entryOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #000; 
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 50; 
+            transition: opacity 1s ease, visibility 1s;
+        }
+
+        .enter-btn {
+            position: relative;
+            padding: 15px 40px;
+            font-size: 1.3rem;
+            background-color: #107c10;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 25px;
+            font-weight: bold;
+            overflow: hidden;
+            transition: transform 0.2s ease, background-color 0.2s;
+            min-width: 150px;
+            outline: none;
+        }
+
+        .enter-btn:hover, .enter-btn:focus {
+            background-color: #1ab01a;
+            transform: scale(1.05);
+            outline: 4px solid white;
+            outline-offset: 4px;
+        }
+
+        .enter-btn::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 0%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.3);
+            transition: width 0s linear; 
+            pointer-events: none;
+        }
+
+        .enter-btn.holding {
+            transform: scale(0.95); 
+        }
+
+        .enter-btn.holding::after {
+            width: 100%;
+            transition: width 2s linear; 
+        }
+
+        /* ==========================================
+           CIRCLES MENU LAYER
+           ========================================== */
+        #circlesMenu {
+            display: none;
+            opacity: 0;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 40; 
+            transition: opacity 0.5s ease;
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        body.show-circles #circlesMenu {
+            display: block;
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .menu-title {
+            position: absolute;
+            top: 25%;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            font-size: 2.5rem;
+            font-weight: 400;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.8);
+            z-index: 45;
+            margin: 0;
+            user-select: none;
+        }
+
+        .circle-wrapper {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+
+        .circle {
+            position: absolute;
+            top: 55%;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border: none;
+            transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), 
+                        width 0.4s ease, 
+                        height 0.4s ease,
+                        opacity 0.4s ease,
+                        box-shadow 0.4s ease;
+            box-shadow: 0 0 10px rgba(0,0,0,0.3);
+        }
+
+        .circle.keyboard-focused {
+            outline: 4px solid #107c10;
+            outline-offset: 6px;
+        }
+
+        .circle-img {
+            width: 50%;
+            height: 50%;
+            object-fit: contain;
+            pointer-events: none;
+        }
+
+        .circle-label {
+            position: absolute;
+            bottom: -60px;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+            color: white;
+            user-select: none;
+            transition: font-size 0.4s ease, opacity 0.4s ease;
+        }
+
+        .circle[data-pos="0"] {
+            width: 160px;
+            height: 160px;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 45;
+            box-shadow: 0 0 25px rgba(0,0,0,0.6);
+            opacity: 1;
+        }
+        .circle[data-pos="0"] .circle-label {
+            font-size: 1.2rem;
+            font-weight: bold;
+            opacity: 1;
+        }
+
+        .circle[data-pos="1"] {
+            width: 110px;
+            height: 110px;
+            left: 50%;
+            transform: translate(calc(-50% + 160px), -50%);
+            z-index: 42;
+            opacity: 0.8;
+        }
+        .circle[data-pos="-1"] {
+            width: 110px;
+            height: 110px;
+            left: 50%;
+            transform: translate(calc(-50% - 160px), -50%);
+            z-index: 42;
+            opacity: 0.8;
+        }
+        .circle[data-pos="1"] .circle-label,
+        .circle[data-pos="-1"] .circle-label {
+            font-size: 0.9rem;
+            font-weight: normal;
+            opacity: 0.6;
+        }
+
+        .circle[data-pos="2"] {
+            width: 80px;
+            height: 80px;
+            left: 50%;
+            transform: translate(calc(-50% + 300px), -50%);
+            z-index: 40;
+            opacity: 0.4;
+        }
+        .circle[data-pos="-2"] {
+            width: 80px;
+            height: 80px;
+            left: 50%;
+            transform: translate(calc(-50% - 300px), -50%);
+            z-index: 40;
+            opacity: 0.4;
+        }
+
+        .circle[data-pos="2"] .circle-label,
+        .circle[data-pos="-2"] .circle-label,
+        .circle[data-pos="far-right"] .circle-label,
+        .circle[data-pos="far-left"] .circle-label {
+            opacity: 0;
+        }
+
+        .circle[data-pos="far-right"] {
+            width: 60px;
+            height: 60px;
+            left: 50%;
+            transform: translate(calc(-50% + 450px), -50%);
+            z-index: 38;
+            opacity: 0;
+            pointer-events: none;
+        }
+        .circle[data-pos="far-left"] {
+            width: 60px;
+            height: 60px;
+            left: 50%;
+            transform: translate(calc(-50% - 450px), -50%);
+            z-index: 38;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        /* ==========================================
+           SETUP WIZARD DIALOG BOXES
+           ========================================== */
+        .interface-box {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 40;
+            background-color: #222222; 
+            border: 4px solid #444444; 
+            box-shadow: 0 0 0 4px #2b2b2b, 0 20px 40px rgba(0,0,0,0.6); 
+            display: none; 
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        #profileBox { width: 580px; height: 220px; }
+        #colorBox, #gamerpicBox { width: 920px; height: 520px; }
+
+        .shake { animation: shake 0.2s ease-in-out 0s 2; }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-6px); }
+            75% { transform: translateX(6px); }
+        }
+
+        .box-content {
+            width: 100%;
+            padding: 30px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .wizard-title {
+            font-size: 1.8rem;
+            font-weight: 500;
+            color: #e0e0e0;
+            margin-bottom: 2px;
+            letter-spacing: 0.5px;
+        }
+
+        .wizard-desc { font-size: 0.9rem; color: #a0a0a0; margin-bottom: 20px; }
+
+        input[type="text"] {
+            width: 85%;
+            background-color: #161616;
+            border: 2px solid #555555;
+            padding: 12px 16px;
+            font-size: 1.2rem;
+            color: #fff;
+            outline: none;
+            caret-color: #e0e0e0;
+            margin-bottom: 15px;
+        }
+        input[type="text"]:focus { border-color: #888888; }
+
+        .footer-hint {
+            font-size: 0.75rem;
+            color: #666666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .color-grid, .gamerpic-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 24px;
+            margin-top: 15px;
+            width: 100%;
+            justify-items: center;
+        }
+
+        .color-circle, .gamerpic-circle {
+            width: 130px;
+            height: 130px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 4px solid transparent;
+            transition: transform 0.1s ease, border-color 0.15s ease, outline 0.15s ease;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            background-color: #2b2b30;
+        }
+        .color-circle:active, .gamerpic-circle:active { transform: scale(0.95); }
+
+        .color-circle.selected, .gamerpic-circle.selected {
+            border-color: #ffffff; 
+        }
+
+        .color-circle.keyboard-focused, .gamerpic-circle.keyboard-focused {
+            outline: 4px solid #107c10;
+            outline-offset: 4px;
+            z-index: 10;
+        }
+
+        .gamerpic-img { width: 75%; height: 75%; object-fit: contain; pointer-events: none; }
+
+        body.show-profile #profileBox { display: flex; pointer-events: auto; opacity: 1; }
+        body.show-colors #colorBox { display: flex; pointer-events: auto; opacity: 1; }
+        body.show-gamerpic #gamerpicBox { display: flex; pointer-events: auto; opacity: 1; }
+
+        /* ==========================================
+           MAIN HOME DASHBOARD VIEW
+           ========================================== */
+        #homeDashboard {
+            display: none;
+            opacity: 0;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 30;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 30px 40px;
+            overflow-y: auto;
+            transition: opacity 0.5s ease;
+            pointer-events: none;
+        }
+
+        body.show-home #homeDashboard {
+            display: flex;
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        #warning-banner {
+            display: none; 
+            width: 100%;
+            background-color: #d83b01; 
+            color: white;
+            padding: 14px 50px 14px 20px; 
+            font-weight: 600;
+            font-size: 0.95rem;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 3000;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            text-align: left;
+        }
+
+        .close-banner-btn {
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: white;
+            font-size: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            line-height: 1;
+            opacity: 0.8;
+            transition: opacity 0.2s ease, transform 0.2s ease;
+        }
+        .close-banner-btn:hover { opacity: 1; transform: translateY(-50%) scale(1.2); }
+
+        .xbox-guide-container {
+            width: var(--sidebar-width);
+            background-color: var(--sidebar-bg-color);
+            padding: 15px 0 0 0;
+            box-shadow: 5px 0 30px rgba(0,0,0,0.8);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            border-radius: 0px; 
+            position: fixed;
+            top: 0;
+            left: calc(-1 * var(--sidebar-width));
+            z-index: 2000;
+            transition: left 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+
+        .xbox-guide-container.open {
+            left: 0;
+        }
+
+        .top-nav-guide {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 15px 10px 15px;
+        }
+
+        .nav-icon {
+            cursor: pointer;
+            padding: 8px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 42px;
+            height: 42px;
+            border-radius: 50%; 
+            border: 2px solid transparent;
+            transition: background-color 0.1s;
+        }
+
+        .nav-icon.active-tab {
+            background-color: var(--accent-box-color);
+        }
+
+        .nav-icon:hover {
+            background-color: var(--item-hover-bg);
+        }
+
+        .ui-png-logo {
+            width: 24px;
+            height: 24px;
+            object-fit: cover;
+            border-radius: 50%; 
+            opacity: 0.5; 
+            transition: opacity 0.15s;
+        }
+
+        .nav-icon:hover .ui-png-logo,
+        .nav-icon.active-tab .ui-png-logo,
+        .bottom-btn.focused .ui-png-logo {
+            opacity: 1; 
+        }
+
+        .menu-item-icon {
+            width: 24px;       
+            height: 24px;      
+            margin-right: 15px;
+            object-fit: contain;
+            border-radius: 50%; 
+        }
+
+        .circle-profile {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%; 
+            object-fit: cover;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .menu-list {
+            padding: 0 15px;
+            padding-top: 15px;
+            flex-grow: 1; 
+        }
+
+        .menu-item {
+            display: flex;
+            align-items: center;
+            padding: var(--tile-height-padding) 12px; 
+            margin-bottom: 0px; 
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
+            border: 2px solid transparent;
+            border-radius: 0px; 
+            color: var(--text-primary-color);
+            transition: background-color 0.1s;
+        }
+
+        .menu-item:hover {
+            background-color: var(--item-hover-bg);
+        }
+
+        .activity-details {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .activity-title {
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+
+        .menu-item.focused, .bottom-btn.focused {
+            background-color: var(--accent-box-color) !important;
+            border: 2px solid transparent !important;
+            box-shadow: none !important;
+        }
+
+        .divider {
+            border: 0;
+            height: 1px;
+            background: var(--divider-line-color);
+            margin: 15px 15px;
+        }
+
+        .bottom-nav-guide {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            background-color: var(--bottom-nav-bg-color); 
+            margin-top: auto;
+            border-top: 1px solid var(--bottom-nav-top-border); 
+        }
+
+        .bottom-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: var(--bottom-btn-height); 
+            cursor: pointer;
+            border: 1px solid var(--bottom-btn-border);
+            border-radius: 0px; 
+            transition: background-color 0.1s;
+        }
+
+        .bottom-btn:hover {
+            background-color: var(--item-hover-bg);
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            z-index: 1000;
+        }
+
+        .channel-logo-container {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%; 
+            background-color: #2a2a2a; 
+            overflow: hidden; 
+            cursor: pointer;
+            border: none; 
+            transition: transform 0.3s ease;
+            z-index: 2500;
+        }
+        .channel-logo-container:hover { transform: scale(1.05); }
+        .channel-logo-container img { width: 100%; height: 100%; object-fit: cover; }
+
+        .top-nav-site {
+            display: flex;
+            gap: 20px;
+            background: none;
+            padding: 0;
+            border: none;
+            align-items: center;
+        }
+
+        .nav-icon-site {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%; 
+            cursor: pointer;
+            opacity: 0.7;
+            background-color: #2a2a2a;
+            overflow: hidden;
+            border: none; 
+            transition: opacity 0.2s ease, transform 0.2s ease;
+        }
+        .nav-icon-site:hover { opacity: 1; transform: scale(1.1); }
+        .nav-icon-site img { width: 100%; height: 100%; object-fit: cover; }
+
+        .time-display {
+            font-size: 1.2rem;
+            color: #ffffff;
+            font-weight: 600;
+            background: none;
+            padding: 0;
+            border: none;
+        }
+
+        .dashboard-container {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+            width: 100%;
+            max-width: 1400px;
+            margin: 0 auto;
+            margin-top: auto; 
+            padding-top: 40px;
+        }
+
+        .card-row {
+            display: flex;
+            gap: 20px;
+            align-items: flex-end; 
+            width: 100%;
+            height: 260px; 
+        }
+
+        .card {
+            height: 180px;
+            flex: 1 1 150px; 
+            border-radius: 0; 
+            cursor: pointer;
+            border: none; 
+            background-color: #2a2a2a; 
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            transition: flex-grow 0.4s cubic-bezier(0.25, 1, 0.5, 1), height 0.4s cubic-bezier(0.25, 1, 0.5, 1), transform 0.3s ease;
+        }
+
+        .card.card-1 { background-image: url('card1.png'); }
+        .card.card-2 { background-image: url('card2.png'); }
+        .card.card-3 { background-image: url('card3.png'); }
+        .card.card-4 { background-image: url('card4.png'); }
+        .card.card-5 { background-image: url('card5.png'); }
+
+        .card:hover, .card.featured { z-index: 10; box-shadow: 0 10px 25px rgba(0,0,0,0.6); }
+        .card.featured { height: 260px; flex-grow: 2.5; }
+
+        .tile-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+
+        .tile {
+            height: 120px;
+            border-radius: 0; 
+            cursor: pointer;
+            border: none; 
+            background-color: #1e1e1e;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            transition: transform 0.3s ease;
+        }
+
+        .tile.tile-left { background-image: url('tile-left.png'); }
+        .tile.tile-center { background-image: url('tile-center.png'); }
+        .tile.tile-right { background-image: url('tile-right.png'); }
+        .tile:hover { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(0,0,0,0.6); }
+
+        @media (max-width: 1024px) {
+            #homeDashboard { overflow-y: auto; }
+            .dashboard-container { margin-top: 40px; }
+            .card-row { height: auto; flex-direction: row; flex-wrap: wrap; align-items: stretch; }
+            .card { height: 150px; flex: 1 1 calc(50% - 10px); }
+            .card.featured { height: 180px; flex: 1 1 100%; }
+            .card:hover, .tile:hover { transform: none !important; box-shadow: none !important; }
+            .card.featured { box-shadow: 0 8px 16px rgba(0,0,0,0.5) !important; }
+        }
+
+        @media (max-width: 600px) {
+            header { flex-direction: column; gap: 15px; }
+            .card-row { flex-direction: column; }
+            .card { flex: none; height: 120px; }
+            .card.featured { height: 160px; }
+            .tile-row { grid-template-columns: 1fr; }
+            .tile { height: 100px; }
+        }
+    </style>
+</head>
+<body class="text-white font-sans flex flex-col justify-between select-none relative w-full h-full p-4">
+
+    <div class="video-layer">
+        <video id="video1" class="video-background" playsinline>
+            <source src="https://github.com/rzwn2bm626-rgb/Xbox-boot-up/raw/refs/heads/main/Xbox%20Sound%20Effect%20_%20Logo%20Animation%202020%20(2)%20-%20(1080p).mp4" type="video/mp4">
+        </video>
+
+        <video id="video2" class="video-background" autoplay muted loop playsinline>
+            <source src="[4K] Xbox Series XS Waves (Dark Grey) Dynamic Background - DirtABXY (1080p).mp4" type="video/mp4">
+        </video>
+    </div>
+
+    <div id="entryOverlay">
+        <button id="enterButton" class="enter-btn">ENTER</button>
+    </div>
+
+    <div id="circlesMenu">
+        <video autoplay muted loop playsinline class="absolute inset-0 w-full h-full object-cover -z-10">
+            <source src="[4K] Xbox Series XS Waves (Dark Grey) Dynamic Background - DirtABXY (1080p).mp4" type="video/mp4">
+        </video>
+        <h1 class="menu-title">Who's playing today</h1>
+        
+        <div class="circle-wrapper" id="circleWrapper">
+            <div id="circle1" class="circle">
+                <img src="https://img.icons8.com/?size=100&id=11153&format=png&color=FFFFFF" class="circle-img" alt="Player Icon">
+                <span class="circle-label">Add a player</span>
+            </div>
+            
+            <div id="circle2" class="circle">
+                <img src="https://img.icons8.com/?size=100&id=x8Nly5EO1LOF&format=png&color=FFFFFF" class="circle-img" alt="Skip Icon">
+                <span class="circle-label">Skip the entry</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="interface-box" id="profileBox">
+        <div class="box-content">
+            <h1 class="wizard-title">Create a new Profile</h1>
+            <p class="wizard-desc">Enter a Gamertag</p>
+            <input type="text" id="gamertagInput" autocomplete="off" spellcheck="false" maxlength="12">
+            <div class="footer-hint">Press Enter to Confirm</div>
+        </div>
+    </div>
+
+    <div class="interface-box" id="colorBox">
+        <div class="box-content">
+            <h1 class="wizard-title" style="margin-bottom: 4px;">Pick a color</h1>
+            <div class="color-grid">
+                <div class="color-circle keyboard-focused selected" style="background-color: #275914;"></div>
+                <div class="color-circle" style="background-color: #236181;"></div>
+                <div class="color-circle" style="background-color: #a62a11;"></div>
+                <div class="color-circle" style="background-color: #c97918;"></div>
+                <div class="color-circle" style="background-color: #4b2373;"></div>
+                <div class="color-circle" style="background-color: #cc3160;"></div>
+                <div class="color-circle" style="background-color: #3fa64b;"></div>
+                <div class="color-circle" style="background-color: #787d7b;"></div>
+                <div class="color-circle" style="background-color: #694924;"></div>
+                <div class="color-circle" style="background-color: #175e54;"></div>
+            </div>
+            <div class="footer-hint" style="margin-top: 15px;">Use Arrow Keys & Enter</div>
+        </div>
+    </div>
+
+    <div class="interface-box" id="gamerpicBox">
+        <div class="box-content">
+            <h1 class="wizard-title" style="margin-bottom: 4px;">Choose your Gamerpic</h1>
+            <div class="gamerpic-grid">
+                <div class="gamerpic-circle keyboard-focused selected" data-img="https://commons.wikimedia.org/wiki/Special:FilePath/Twemoji_1f440.svg">
+                    <img class="gamerpic-img" src="https://commons.wikimedia.org/wiki/Special:FilePath/Twemoji_1f440.svg" alt="Pic 1">
+                </div>
+                <div class="gamerpic-circle" data-img="https://images.emojiterra.com/google/noto-emoji/unicode-17.0/color/svg/1f47b.svg">
+                    <img class="gamerpic-img" src="https://images.emojiterra.com/google/noto-emoji/unicode-17.0/color/svg/1f47b.svg" alt="Pic 2">
+                </div>
+                <div class="gamerpic-circle" data-img="https://upload.wikimedia.org/wikipedia/commons/thumb/1/18/Noto_Emoji_v2.034_1f480.svg/1280px-Noto_Emoji_v2.034_1f480.svg.png">
+                    <img class="gamerpic-img" src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/18/Noto_Emoji_v2.034_1f480.svg/1280px-Noto_Emoji_v2.034_1f480.svg.png" alt="Pic 3">
+                </div>
+                <div class="gamerpic-circle" data-img="https://commons.wikimedia.org/wiki/Special:FilePath/Twemoji_1f47d.svg">
+                    <img class="gamerpic-img" src="https://commons.wikimedia.org/wiki/Special:FilePath/Twemoji_1f47d.svg" alt="Pic 4">
+                </div>
+                <div class="gamerpic-circle" data-img="https://commons.wikimedia.org/wiki/Special:FilePath/Twemoji_1f916.svg">
+                    <img class="gamerpic-img" src="https://commons.wikimedia.org/wiki/Special:FilePath/Twemoji_1f916.svg" alt="Pic 5">
+                </div>
+                <div class="gamerpic-circle" data-img="https://commons.wikimedia.org/wiki/Special:FilePath/Twemoji_1f680.svg">
+                    <img class="gamerpic-img" src="https://commons.wikimedia.org/wiki/Special:FilePath/Twemoji_1f680.svg" alt="Pic 6">
+                </div>
+                <div class="gamerpic-circle" data-img="https://commons.wikimedia.org/wiki/Special:FilePath/Twemoji_1f451.svg">
+                    <img class="gamerpic-img" src="https://commons.wikimedia.org/wiki/Special:FilePath/Twemoji_1f451.svg" alt="Pic 7">
+                </div>
+                <div class="gamerpic-circle" data-img="https://commons.wikimedia.org/wiki/Special:FilePath/Twemoji_1f525.svg">
+                    <img class="gamerpic-img" src="https://commons.wikimedia.org/wiki/Special:FilePath/Twemoji_1f525.svg" alt="Pic 8">
+                </div>
+                <div class="gamerpic-circle" data-img="https://commons.wikimedia.org/wiki/Special:FilePath/Twemoji_1f48e.svg">
+                    <img class="gamerpic-img" src="https://commons.wikimedia.org/wiki/Special:FilePath/Twemoji_1f48e.svg" alt="Pic 9">
+                </div>
+                <div class="gamerpic-circle" data-img="https://commons.wikimedia.org/wiki/Special:FilePath/Twemoji_1f3af.svg">
+                    <img class="gamerpic-img" src="https://commons.wikimedia.org/wiki/Special:FilePath/Twemoji_1f3af.svg" alt="Pic 10">
+                </div>
+            </div>
+            <div class="footer-hint" style="margin-top: 15px;">Use Arrow Keys & Enter</div>
+        </div>
+    </div>
+
+    <!-- MAIN HOME DASHBOARD UI -->
+    <div id="homeDashboard">
+        <div id="warning-banner">
+            <span id="warning-text"></span>
+            <button class="close-banner-btn" onclick="dismissBanner()">×</button>
+        </div>
+
+        <div class="xbox-guide-container" id="guideMenu">
+            <div class="top-nav-guide">
+                <div class="nav-icon active-tab" data-type="tab">
+                    <img class="ui-png-logo" src="https://img.icons8.com/?size=100&id=qd31Kv1WcXAH&format=png&color=FFFFFF" alt="Xbox logo">
+                </div>
+                <div class="nav-icon" data-type="tab">
+                    <img class="ui-png-logo" src="https://img.icons8.com/?size=100&id=pfTokzw9oCsU&format=png&color=FFFFFF" alt="Friends logo">
+                </div>
+                <div class="nav-icon" data-type="tab">
+                    <img class="ui-png-logo" src="https://img.icons8.com/?size=100&id=61637&format=png&color=FFFFFF" alt="Messages logo">
+                </div>
+                <div class="nav-icon" data-type="tab">
+                    <img class="ui-png-logo" src="https://img.icons8.com/?size=100&id=Bg9xK6WM86bv&format=png&color=FFFFFF" alt="Trophy logo">
+                </div>
+                <div class="nav-icon" data-type="tab">
+                    <img class="ui-png-logo" src="https://img.icons8.com/?size=100&id=MIoOlVf8yjsm&format=png&color=FFFFFF" alt="Share logo">
+                </div>
+                <div class="nav-icon" data-type="tab">
+                    <img id="profileTabPic" class="circle-profile" src="https://img.icons8.com/?size=100&id=85147&format=png&color=FFFFFF" alt="Profile pic">
+                </div>
+            </div>
+
+            <div class="menu-list">
+                <div class="menu-item focused" data-type="tile">
+                    <img class="menu-item-icon" src="https://img.icons8.com/?size=100&id=84005&format=png&color=FFFFFF" alt="Home symbol">
+                    <div class="activity-details">
+                        <div class="activity-title">Home</div>
+                    </div>
+                </div>
+                <div class="menu-item" data-type="tile">
+                    <img class="menu-item-icon" src="https://img.icons8.com/?size=100&id=61986&format=png&color=FFFFFF" alt="Library symbol">
+                    <div class="activity-details">
+                        <div class="activity-title">My games & apps</div>
+                    </div>
+                </div>
+                <hr class="divider">
+            </div>
+
+            <div class="bottom-nav-guide">
+                <div class="bottom-btn" data-type="tile">
+                    <img class="ui-png-logo" src="https://img.icons8.com/?size=100&id=84025&format=png&color=FFFFFF" alt="Notification bell">
+                </div>
+                <div class="bottom-btn" data-type="tile">
+                    <img class="ui-png-logo" src="https://img.icons8.com/?size=100&id=12504&format=png&color=FFFFFF" alt="Game Pass icon">
+                </div>
+                <div class="bottom-btn" data-type="tile">
+                    <img class="ui-png-logo" src="https://img.icons8.com/?size=100&id=W5ufHFPFwaDN&format=png&color=FFFFFF" alt="Store bag">
+                </div>
+                <div class="bottom-btn" data-type="tile">
+                    <img class="ui-png-logo" src="https://img.icons8.com/?size=100&id=7695&format=png&color=FFFFFF" alt="Search glass">
+                </div>
+                <div class="bottom-btn" data-type="tile">
+                    <img class="ui-png-logo" src="https://img.icons8.com/?size=100&id=22778&format=png&color=FFFFFF" alt="Speaker icon">
+                </div>
+            </div>
+        </div>
+
+        <header id="site-header">
+            <div class="channel-logo-container" id="logoTrigger">
+                <img id="userLogoTrigger" src="channel-logo.png" alt="Logo">
+            </div>
+            
+            <nav class="top-nav-site">
+                <div class="nav-icon-site"><img src="nav-left-new.png" alt="New Left"></div>
+                <div class="nav-icon-site"><img src="nav-icon1.png" alt="Nav 1"></div>
+                <div class="nav-icon-site"><img src="nav-icon2.png" alt="Nav 2"></div>
+                <div class="nav-icon-site"><img src="https://img.icons8.com/?size=100&id=HH6pnjRzZrc2&format=png&color=FFFFFF" alt="Nav 3"></div>
+                <div class="nav-icon-site"><img src="nav-right-new.png" alt="New Right"></div>
+            </nav>
+            
+            <div class="time-display" id="clock">12:00 PM</div>
+        </header>
+
+        <main class="dashboard-container">
+            <div class="card-row">
+                <div class="card card-1 featured"></div>
+                <div class="card card-2"></div>
+                <div class="card card-3"></div>
+                <div class="card card-4"></div>
+                <div class="card card-5"></div>
+            </div>
+
+            <div class="tile-row">
+                <div class="tile tile-left"></div>
+                <div class="tile tile-center"></div>
+                <div class="tile tile-right"></div>
+            </div>
+        </main>
+    </div>
+
+    <audio id="clickSound" src="https://github.com/school-rgb/math-loading-/raw/refs/heads/main/ps5-selection-button.mp3" preload="auto"></audio>
+    <audio id="navSound" src="https://github.com/school-rgb/new-Xbox-app-os/raw/refs/heads/main/ps5-scroll%20(1).mp3" preload="auto"></audio>
+    <audio id="selectSound" src="https://github.com/school-rgb/new-Xbox-app-os/raw/refs/heads/main/xbox-series-select.mp3" preload="auto"></audio>
+    <audio id="backSound" src="https://github.com/school-rgb/Xbox-wallpaper/raw/refs/heads/main/xbox-series-back.mp3" preload="auto"></audio>
+    <audio id="bgMusic" src="https://github.com/rzwn2bm626-rgb/Menu-music-/raw/refs/heads/main/Home.mp4" loop preload="auto"></audio>
+
+    <script>
+        const enterButton = document.getElementById('enterButton');
+        const entryOverlay = document.getElementById('entryOverlay');
+        const video1 = document.getElementById('video1');
+        const video2 = document.getElementById('video2');
+        const circlesMenu = document.getElementById('circlesMenu');
+        
+        const clickSound = document.getElementById('clickSound');
+        const navSound = document.getElementById('navSound');
+        const selectSound = document.getElementById('selectSound');
+        const backSound = document.getElementById('backSound');
+        const bgMusic = document.getElementById('bgMusic');
+
+        let newGamertag = "";
+        let newColor = "#275914";
+
+        const profileBox = document.getElementById('profileBox');
+        const input = document.getElementById('gamertagInput');
+        
+        const colorCircles = document.querySelectorAll('.color-circle');
+        let colorIndex = 0;
+
+        const gamerpicCircles = document.querySelectorAll('.gamerpic-circle');
+        let gamerpicIndex = 0;
+        
+        let circles = Array.from(document.querySelectorAll('.circle'));
+        let circleIndex = 0;
+
+        const defaultProfiles = [
+          
+        ];
+
+        function playSFX(audioElement) {
+            audioElement.currentTime = 0;
+            audioElement.play().catch(err => console.log("Audio block/loading"));
+        }
+
+        let isStarted = false;
+
+        window.addEventListener('load', () => {
+            enterButton.focus();
+            initDefaultProfiles();
+            loadSavedProfiles();
+            repositionCircles(0);
+        });
+
+        function initDefaultProfiles() {
+            defaultProfiles.forEach(p => {
+                attachProfileCircle(p.gamertag, p.gamerpic, p.color);
+            });
+        }
+
+        function saveCurrentProfile() {
+            if (!newGamertag) return;
+            const profiles = JSON.parse(localStorage.getItem('xbox_saved_profiles') || '[]');
+            const newProfile = {
+                gamertag: newGamertag,
+                color: newColor,
+                gamerpic: gamerpicCircles[gamerpicIndex].getAttribute('data-img'),
+                createdAt: new Date().toISOString()
+            };
+            profiles.push(newProfile);
+            localStorage.setItem('xbox_saved_profiles', JSON.stringify(profiles));
+        }
+
+        function loadSavedProfiles() {
+            const profiles = JSON.parse(localStorage.getItem('xbox_saved_profiles') || '[]');
+            profiles.forEach(p => {
+                attachProfileCircle(p.gamertag, p.gamerpic, p.color);
+            });
+        }
+
+        function attachProfileCircle(gamertag, gamerpicSrc, bgColor) {
+            const circleWrapper = document.getElementById('circleWrapper');
+            const newCircle = document.createElement('div');
+            newCircle.className = 'circle profile-circle';
+            newCircle.style.backgroundColor = bgColor;
+            newCircle.dataset.gamertag = gamertag;
+            newCircle.dataset.gamerpic = gamerpicSrc;
+            newCircle.innerHTML = `
+                <img src="${gamerpicSrc}" class="circle-img" alt="${gamertag}" style="border-radius:50%; object-fit:cover; width:80%; height:80%;">
+                <span class="circle-label">${gamertag}</span>
+            `;
+
+            const addPlayerCircle = document.getElementById('circle1');
+            circleWrapper.insertBefore(newCircle, addPlayerCircle.nextSibling);
+
+            circles = Array.from(document.querySelectorAll('.circle'));
+            
+            newCircle.addEventListener('click', function() {
+                const myIdx = circles.indexOf(this);
+                if (circleIndex === myIdx) {
+                    playSFX(selectSound);
+                    openHomeDashboard(gamerpicSrc);
+                } else {
+                    playSFX(navSound);
+                    repositionCircles(myIdx);
+                }
+            });
+        }
+
+        function addProfileCircleToMenu(gamertag, gamerpicSrc) {
+            attachProfileCircle(gamertag, gamerpicSrc, newColor);
+            repositionCircles(circleIndex);
+        }
+
+        function repositionCircles(centerIdx) {
+            circleIndex = centerIdx;
+            circles.forEach((c, idx) => {
+                c.classList.remove('keyboard-focused');
+                let offset = idx - centerIdx;
+
+                if (offset === 0) {
+                    c.setAttribute('data-pos', '0');
+                    c.classList.add('keyboard-focused');
+                } else if (offset === 1) {
+                    c.setAttribute('data-pos', '1');
+                } else if (offset === -1) {
+                    c.setAttribute('data-pos', '-1');
+                } else if (offset === 2) {
+                    c.setAttribute('data-pos', '2');
+                } else if (offset === -2) {
+                    c.setAttribute('data-pos', '-2');
+                } else if (offset > 2) {
+                    c.setAttribute('data-pos', 'far-right');
+                } else if (offset < -2) {
+                    c.setAttribute('data-pos', 'far-left');
+                }
+            });
+        }
+
+        function triggerEntrySequence() {
+            if (isStarted) return;
+            isStarted = true;
+            enterButton.innerText = "STARTING UP...";
+            enterButton.style.backgroundColor = "#1ab01a"; 
+            
+            video1.muted = false;
+            video2.muted = false;
+            clickSound.muted = false;
+            navSound.muted = false;
+            selectSound.muted = false;
+            backSound.muted = false;
+
+            playSFX(clickSound);
+            
+            setTimeout(() => {
+                entryOverlay.style.opacity = '0';
+                entryOverlay.style.visibility = 'hidden';
+
+                video1.play().catch(err => {
+                    handleVideo1End();
+                });
+            }, 3500); 
+        }
+
+        let holdTimer;
+        function startHold(e) {
+            if (isStarted) return; 
+            e.preventDefault(); 
+            enterButton.classList.add('holding'); 
+            holdTimer = setTimeout(triggerEntrySequence, 2000);
+        }
+        function cancelHold() {
+            if (isStarted) return;
+            enterButton.classList.remove('holding'); 
+            clearTimeout(holdTimer); 
+        }
+
+        enterButton.addEventListener('mousedown', startHold);
+        enterButton.addEventListener('mouseup', cancelHold);
+        enterButton.addEventListener('mouseleave', cancelHold); 
+        enterButton.addEventListener('touchstart', startHold);
+        enterButton.addEventListener('touchend', cancelHold);
+        enterButton.addEventListener('touchcancel', cancelHold);
+
+        video1.addEventListener('ended', handleVideo1End);
+
+        function handleVideo1End() {
+            video1.style.display = 'none';
+            video2.style.display = 'block';
+            video2.play().catch(err => console.error("Video 2 error:", err));
+            bgMusic.play().catch(err => console.error("Music error:", err));
+            document.body.className = "text-white relative select-none show-circles";
+        }
+
+        function openHomeDashboard(gamerpicSrc) {
+            if (gamerpicSrc) {
+                document.getElementById('userLogoTrigger').src = gamerpicSrc;
+                document.getElementById('profileTabPic').src = gamerpicSrc;
+            }
+            document.body.className = "text-white relative select-none show-home";
+            detectDevice();
+        }
+
+        function updateColorFocus() {
+            colorCircles.forEach((c, idx) => {
+                if (idx === colorIndex) c.classList.add('keyboard-focused');
+                else c.classList.remove('keyboard-focused');
+            });
+        }
+
+        function updateGamerpicFocus() {
+            gamerpicCircles.forEach((c, idx) => {
+                if (idx === gamerpicIndex) c.classList.add('keyboard-focused');
+                else c.classList.remove('keyboard-focused');
+            });
+        }
+
+        function startProfileCreationFlow() {
+            playSFX(clickSound);
+            document.body.className = "text-white relative select-none show-profile";
+            input.value = "";
+            input.focus();
+        }
+
+        input.addEventListener('keydown', function(event) {
+            if (event.key === 'Enter') {
+                const username = input.value.trim();
+                if (username === "") {
+                    profileBox.classList.remove('shake');
+                    void profileBox.offsetWidth; 
+                    profileBox.classList.add('shake');
+                } else {
+                    playSFX(selectSound);
+                    newGamertag = username;
+                    document.body.className = "text-white relative select-none show-colors";
+                    colorIndex = 0;
+                    updateColorFocus();
+                }
+            }
+        });
+
+        window.addEventListener('keydown', (e) => {
+            if (!isStarted && e.key === 'Enter') {
+                e.preventDefault();
+                triggerEntrySequence();
+                return;
+            }
+
+            if (document.body.classList.contains('show-circles')) {
+                if (e.key === 'ArrowRight') {
+                    if (circleIndex < circles.length - 1) {
+                        playSFX(navSound);
+                        repositionCircles(circleIndex + 1);
+                    }
+                } else if (e.key === 'ArrowLeft') {
+                    if (circleIndex > 0) {
+                        playSFX(navSound);
+                        repositionCircles(circleIndex - 1);
+                    }
+                } else if (e.key === 'Enter') {
+                    e.preventDefault();
+                    playSFX(selectSound);
+                    const currentCenter = circles[circleIndex];
+                    if (currentCenter.id === 'circle1') {
+                        startProfileCreationFlow();
+                    } else if (currentCenter.id === 'circle2') {
+                        openHomeDashboard();
+                    } else if (currentCenter.classList.contains('profile-circle')) {
+                        openHomeDashboard(currentCenter.dataset.gamerpic);
+                    }
+                }
+                return;
+            }
+
+            if (document.body.classList.contains('show-colors')) {
+                let moved = false;
+                if (e.key === 'ArrowRight' && colorIndex % 5 < 4) { colorIndex++; moved = true; }
+                else if (e.key === 'ArrowLeft' && colorIndex % 5 > 0) { colorIndex--; moved = true; }
+                else if (e.key === 'ArrowDown' && colorIndex < 5) { colorIndex += 5; moved = true; }
+                else if (e.key === 'ArrowUp' && colorIndex >= 5) { colorIndex -= 5; moved = true; }
+
+                if (moved) {
+                    playSFX(navSound);
+                    updateColorFocus();
+                } else if (e.key === 'Enter') {
+                    e.preventDefault();
+                    playSFX(selectSound);
+                    colorCircles.forEach((c, i) => {
+                        if (i === colorIndex) {
+                            c.classList.add('selected');
+                            newColor = c.style.backgroundColor;
+                        } else {
+                            c.classList.remove('selected');
+                        }
+                    });
+                    document.body.className = "text-white relative select-none show-gamerpic";
+                    gamerpicIndex = 0;
+                    updateGamerpicFocus();
+                }
+                return;
+            }
+
+            if (document.body.classList.contains('show-gamerpic')) {
+                let moved = false;
+                if (e.key === 'ArrowRight' && gamerpicIndex % 5 < 4) { gamerpicIndex++; moved = true; }
+                else if (e.key === 'ArrowLeft' && gamerpicIndex % 5 > 0) { gamerpicIndex--; moved = true; }
+                else if (e.key === 'ArrowDown' && gamerpicIndex < 5) { gamerpicIndex += 5; moved = true; }
+                else if (e.key === 'ArrowUp' && gamerpicIndex >= 5) { gamerpicIndex -= 5; moved = true; }
+
+                if (moved) {
+                    playSFX(navSound);
+                    updateGamerpicFocus();
+                } else if (e.key === 'Enter') {
+                    e.preventDefault();
+                    playSFX(selectSound);
+                    const imgUrl = gamerpicCircles[gamerpicIndex].getAttribute('data-img');
+                    saveCurrentProfile();
+                    addProfileCircleToMenu(newGamertag, imgUrl);
+                    openHomeDashboard(imgUrl);
+                }
+                return;
+            }
+        });
+
+        enterButton.addEventListener('click', () => {
+            if (!isStarted) triggerEntrySequence();
+        });
+
+        circles.forEach((circle, idx) => {
+            circle.addEventListener('click', function() {
+                if (circleIndex === idx) {
+                    playSFX(selectSound);
+                    if (this.id === 'circle1') {
+                        startProfileCreationFlow();
+                    } else if (this.id === 'circle2') {
+                        openHomeDashboard();
+                    } else if (this.classList.contains('profile-circle')) {
+                        openHomeDashboard(this.dataset.gamerpic);
+                    }
+                    return;
+                }
+
+                playSFX(navSound);
+                repositionCircles(idx);
+            });
+        });
+
+        colorCircles.forEach((circle, idx) => {
+            circle.addEventListener('mouseenter', () => {
+                colorIndex = idx;
+                updateColorFocus();
+            });
+            circle.addEventListener('click', () => {
+                playSFX(selectSound);
+                colorIndex = idx;
+                newColor = circle.style.backgroundColor;
+                colorCircles.forEach(c => c.classList.remove('selected'));
+                circle.classList.add('selected');
+                document.body.className = "text-white relative select-none show-gamerpic";
+                gamerpicIndex = 0;
+                updateGamerpicFocus();
+            });
+        });
+
+        gamerpicCircles.forEach((circle, idx) => {
+            circle.addEventListener('mouseenter', () => {
+                gamerpicIndex = idx;
+                updateGamerpicFocus();
+            });
+            circle.addEventListener('click', () => {
+                playSFX(selectSound);
+                gamerpicIndex = idx;
+                const imgUrl = circle.getAttribute('data-img');
+                saveCurrentProfile();
+                addProfileCircleToMenu(newGamertag, imgUrl);
+                openHomeDashboard(imgUrl);
+            });
+        });
+
+        // DASHBOARD INTERACTION LOGIC
+        const logoTrigger = document.getElementById('logoTrigger');
+        const guideMenu = document.getElementById('guideMenu');
+
+        logoTrigger.addEventListener('click', (e) => {
+            e.stopPropagation();
+            guideMenu.classList.toggle('open');
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!guideMenu.contains(e.target) && e.target !== logoTrigger && !logoTrigger.contains(e.target)) {
+                guideMenu.classList.remove('open');
+            }
+        });
+
+        const cards = document.querySelectorAll('.card');
+        cards.forEach(card => {
+            card.addEventListener('click', () => {
+                document.querySelector('.card.featured')?.classList.remove('featured');
+                card.classList.add('featured');
+            });
+        });
+
+        const tabs = document.querySelectorAll('[data-type="tab"]');
+        const tiles = document.querySelectorAll('[data-type="tile"]');
+
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                tabs.forEach(t => t.classList.remove('active-tab'));
+                tab.classList.add('active-tab');
+            });
+        });
+
+        tiles.forEach(tile => {
+            tile.addEventListener('click', () => {
+                tiles.forEach(t => t.classList.remove('focused'));
+                tile.classList.add('focused');
+            });
+        });
+
+        let isBannerDismissed = false; 
+        function detectDevice() {
+            if (isBannerDismissed) return;
+            const width = window.innerWidth;
+            const userAgent = navigator.userAgent.toLowerCase();
+            const banner = document.getElementById('warning-banner');
+            const warningText = document.getElementById('warning-text');
+
+            if (userAgent.includes('ipad') || (navigator.maxTouchPoints > 1 && width <= 1024 && width > 600)) {
+                warningText.textContent = "⚠️ iPad Mode: Not fully supported but still supported. Box swapping works, outlines disabled.";
+                banner.style.display = "block";
+            } 
+            else if (width <= 600 || userAgent.includes('iphone') || userAgent.includes('android')) {
+                warningText.textContent = "⚠️ Mobile Mode: Not that supported, not about much supported. Stacking items vertically.";
+                banner.style.display = "block";
+            } 
+            else {
+                warningText.textContent = "💻 Desktop Mode: Fully supported. Perfect alignment and smooth layout resizing active!";
+                banner.style.display = "block";
+                banner.style.backgroundColor = "#107c41"; 
+            }
+        }
+
+        function dismissBanner() {
+            const banner = document.getElementById('warning-banner');
+            banner.style.display = "none";
+            isBannerDismissed = true; 
+        }
+
+        window.addEventListener('resize', () => {
+            if (document.body.classList.contains('show-home')) detectDevice();
+        });
+
+        function updateClock() {
+            const now = new Date();
+            let hours = now.getHours();
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const ampm = hours >= 12 ? 'PM' : 'AM';
+            hours = hours % 12 || 12;
+            const clockEl = document.getElementById('clock');
+            if (clockEl) clockEl.textContent = `${hours}:${minutes} ${ampm}`;
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+    </script>
+</body>
+</html>
